@@ -4,6 +4,7 @@ import com.kasimarket.kasimarket_api.auth.JwtAuthFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -55,6 +56,10 @@ public class SecurityConfig {
                         // TEMPORARY: our learning pages and the database viewer stay open.
                         // We delete these two lines later.
                         .requestMatchers("/h2-console/**", "/test/**").permitAll()
+                        // Only clients may book jobs and see their own jobs.
+                        // (Workers get their own job addresses in the next step.)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/jobs").hasRole("CLIENT")
+                        .requestMatchers("/api/v1/jobs/mine").hasRole("CLIENT")
                         // Only clients (and admins, for testing) may ask for price quotes.
                         .requestMatchers("/api/v1/pricing/**").hasAnyRole("CLIENT", "ADMIN")
                         // Only admins may use addresses starting with /api/v1/admin/.
