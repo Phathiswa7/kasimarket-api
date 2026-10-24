@@ -1,42 +1,67 @@
-// A "package" is a folder for Java files. This line says which folder this file belongs to.
 package com.kasimarket.kasimarket_api.config;
 
-// "import" brings in tools made by other people so we can use them in this file.
+import com.kasimarket.kasimarket_api.auth.JwtAuthFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.HttpStatusEntryPoint;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 // @Configuration tells Spring: "this class holds settings, read it when the app starts".
 @Configuration
 public class SecurityConfig {
 
-    // @Bean tells Spring: "create this object once, and let other classes use it".
-    // This one is our password scrambler. Other classes can ask Spring for it.
+    // Our password scrambler (BCrypt), available to any class that asks for it.
     @Bean
     PasswordEncoder passwordEncoder() {
-        // BCrypt turns a password like "hello123" into a long random-looking hash.
-        // We save only the hash, so even if the database leaks, real passwords stay secret.
         return new BCryptPasswordEncoder();
     }
 
-    // This bean sets the security rules for the whole app (who may open which page).
-    // TEMPORARY: right now every page is open to everyone while we build.
-    // Later in Phase 2 we replace this with a real login.
+    // The security rules for the whole app: who may open which address.
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
         http
-                // CSRF protection is a security feature for web forms.
-                // We switch it off for now because we are building an API, not a form website.
+                // We build an API, not a web form site, so CSRF protection is switched off.
                 .csrf(csrf -> csrf.disable())
 
-                // Lets the H2 database console page show properly inside the browser.
+                // Lets the H2 database console page show inside the browser.
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
 
-                // "anyRequest().permitAll()" means: let every request in, no login needed (for now).
-                .authorizeHttpRequests(auth -> auth.anyRequest().permitAll());
+                // STATELESS = the server remembers nobody between requests.
+                // Every request must carry its own token.
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+                // Turn off Spring's built-in login page and pop-up login box.
+                .formLogin(form -> form.disable())
+                .httpBasic(basic -> basic.disable())
+
+                // When someone is not logged in, reply "401 Unauthorized"
+                // instead of sending them to a login page.
+                .exceptionHandling(ex -> ex.authenticationEntryPoint(
+                        new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+
+                // The rules for each address, checked from top to bottom.
+                .authorizeHttpRequests(auth -> auth
+                        // Anyone can register and log in (they have no token yet).
+                        // Spring forwards errors (like "403 Forbidden") to an internal /error page.
+                        // That page must stay open, otherwise every error shows up as 401.
+                        .requestMatchers("/error").permitAll()
+                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        // TEMPORARY: our learning pages and the database viewer stay open.
+                        // We delete these two lines later.
+                        .requestMatchers("/h2-console/**", "/test/**").permitAll()
+                        // Only admins may use addresses starting with /api/v1/admin/.
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+                        // Everything else needs a valid token.
+                        .anyRequest().authenticated())
+
+                // Put our token guard in front of Spring's default login check.
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         // build() finishes the settings and hands them to Spring.
         return http.build();
