@@ -21,15 +21,16 @@ public class AuthController {
         this.authService = authService;
     }
 
-    // POST /api/v1/auth/register
-    // @ResponseStatus(CREATED) makes the reply say "201 Created" when it works.
+    // POST /api/v1/auth/register  (creates an account, replies "201 Created")
     @PostMapping("/register")
     @ResponseStatus(HttpStatus.CREATED)
-    public RegisterResponse register(
-            // @Valid checks the rules on RegisterRequest (valid email, password length, etc.).
-            // @RequestBody turns the data we receive into a RegisterRequest object.
-            @Valid @RequestBody RegisterRequest request) {
-        // The controller only passes the work to the service.
+    public RegisterResponse register(@Valid @RequestBody RegisterRequest request) {
         return authService.register(request);
+    }
+
+    // POST /api/v1/auth/login  (checks the password, replies with a token)
+    @PostMapping("/login")
+    public LoginResponse login(@Valid @RequestBody LoginRequest request) {
+        return authService.login(request);
     }
 }

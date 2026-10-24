@@ -1,9 +1,9 @@
-
 package com.kasimarket.kasimarket_api.auth;
 
 import com.kasimarket.kasimarket_api.user.Role;
 import com.kasimarket.kasimarket_api.user.User;
 import com.kasimarket.kasimarket_api.user.UserRepository;
+import com.kasimarket.kasimarket_api.user.UserStatus;
 import com.kasimarket.kasimarket_api.user.WorkerProfile;
 import com.kasimarket.kasimarket_api.user.WorkerProfileRepository;
 import org.springframework.http.HttpStatus;
@@ -20,19 +20,23 @@ public class AuthService {
     private final UserRepository userRepository;
     private final WorkerProfileRepository workerProfileRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtService jwtService;
 
     // Spring fills these in automatically when it creates the service.
-    // This is called "dependency injection".
     public AuthService(UserRepository userRepository,
                        WorkerProfileRepository workerProfileRepository,
-                       PasswordEncoder passwordEncoder) {
+                       PasswordEncoder passwordEncoder,
+                       JwtService jwtService) {
         this.userRepository = userRepository;
         this.workerProfileRepository = workerProfileRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
     }
 
+    // ---------- REGISTER (same as before) ----------
+
     // @Transactional means: do all the saves below as ONE unit.
-    // If something fails halfway, nothing is saved (no half-created accounts).
+    // If something fails halfway, nothing is saved.
     @Transactional
     public RegisterResponse register(RegisterRequest request) {
 
@@ -42,8 +46,7 @@ public class AuthService {
                     "You can only register as CLIENT or WORKER.");
         }
 
-        // Clean up the email: remove spaces and use lowercase,
-        // so "Thandi@Mail.com" and "thandi@mail.com" count as the same email.
+        // Clean up the email: remove spaces and use lowercase.
         String email = request.email().trim().toLowerCase();
 
         // Rule 2: each email can only be used once.
@@ -64,8 +67,7 @@ public class AuthService {
         // Save it. After saving, the database gives the user an ID.
         userRepository.save(user);
 
-        // Rule 3: workers also get a worker profile.
-        // It starts at tier 1 with status SUBMITTED, waiting for admin approval.
+        // Rule 3: workers also get a worker profile (tier 1, waiting for approval).
         if (request.role() == Role.WORKER) {
             WorkerProfile profile = new WorkerProfile();
             profile.setUser(user);
@@ -73,7 +75,38 @@ public class AuthService {
             workerProfileRepository.save(profile);
         }
 
-        // Send back safe information only (no password, no hash).
         return new RegisterResponse(user.getId(), user.getEmail(), user.getRole());
+    }
+
+    // ---------- LOGIN (new) ----------
+
+    public LoginResponse login(LoginRequest request) {
+
+        // Clean up the email the same way we did when registering.
+        String email = request.email().trim().toLowerCase();
+
+        // Look the person up. If the email is unknown, we throw "401 Unauthorized".
+        // We use the SAME message for a wrong email and a wrong password, so an
+        // attacker cannot use our answers to find out which emails are registered.
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                        "Invalid email or password."));
+
+        // matches() scrambles the typed password and compares it to the saved hash.
+        // We cannot "unscramble" a hash, so this is the only way to check a password.
+        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "Invalid email or password.");
+        }
+
+        // A suspended account is not allowed to log in.
+        if (user.getStatus() != UserStatus.ACTIVE) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "This account is not active.");
+        }
+
+        // Everything is fine, so make a token and send it back.
+        String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
+        return new LoginResponse(token, user.getEmail(), user.getRole());
     }
 }
