@@ -1,9 +1,11 @@
 package com.kasimarket.kasimarket_api.job;
 
+import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -31,6 +33,15 @@ public class WorkerJobController {
     @PostMapping("/{id}/accept")
     public WorkerJobView accept(Authentication authentication, @PathVariable Long id) {
         return workerJobService.accept(authentication.getName(), id);
+    }
+
+    // POST /api/v1/jobs/5/status  with body {"status":"EN_ROUTE"}
+    // Moves job number 5 to its next stage.
+    @PostMapping("/{id}/status")
+    public WorkerJobView updateStatus(Authentication authentication,
+                                      @PathVariable Long id,
+                                      @Valid @RequestBody StatusChangeRequest request) {
+        return workerJobService.updateStatus(authentication.getName(), id, request.status());
     }
 
     // GET /api/v1/jobs/my-work  (jobs this worker has accepted)
