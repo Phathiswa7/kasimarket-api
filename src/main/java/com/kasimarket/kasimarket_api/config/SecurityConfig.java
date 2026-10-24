@@ -55,6 +55,8 @@ public class SecurityConfig {
                         // TEMPORARY: our learning pages and the database viewer stay open.
                         // We delete these two lines later.
                         .requestMatchers("/h2-console/**", "/test/**").permitAll()
+                        // Only clients (and admins, for testing) may ask for price quotes.
+                        .requestMatchers("/api/v1/pricing/**").hasAnyRole("CLIENT", "ADMIN")
                         // Only admins may use addresses starting with /api/v1/admin/.
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         // Everything else needs a valid token.
