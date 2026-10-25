@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 // Every address here starts with /api/v1/admin.
-// Our SecurityConfig already says: only people with the ADMIN role may use these.
+// SecurityConfig already says: only people with the ADMIN role may use these.
 @RestController
 @RequestMapping("/api/v1/admin")
 public class AdminController {
@@ -25,7 +25,6 @@ public class AdminController {
     }
 
     // GET /api/v1/admin/workers?status=SUBMITTED
-    // Lists workers. The "?status=..." part is optional.
     @GetMapping("/workers")
     public List<WorkerSummary> listWorkers(
             @RequestParam(required = false) VettingStatus status) {
@@ -33,11 +32,19 @@ public class AdminController {
     }
 
     // PUT /api/v1/admin/workers/1/decision  with body {"status":"APPROVED"}
-    // Approves, rejects or suspends the worker with that ID.
     @PutMapping("/workers/{id}/decision")
     public WorkerSummary decide(
             @PathVariable Long id,
             @Valid @RequestBody DecisionRequest request) {
         return adminService.decide(id, request.status());
+    }
+
+    // NEW: PUT /api/v1/admin/workers/1/tier  with body {"tier":3,...}
+    // Grants tier 3 (or sets back to 2).
+    @PutMapping("/workers/{id}/tier")
+    public WorkerSummary changeTier(
+            @PathVariable Long id,
+            @Valid @RequestBody TierChangeRequest request) {
+        return adminService.changeTier(id, request);
     }
 }
