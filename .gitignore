@@ -31,3 +31,5 @@ build/
 
 ### VS Code ###
 .vscode/
+# Photos uploaded while testing. We never put these on GitHub.
+uploads/

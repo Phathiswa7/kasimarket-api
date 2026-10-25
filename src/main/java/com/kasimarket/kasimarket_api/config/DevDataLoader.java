@@ -5,53 +5,79 @@ import com.kasimarket.kasimarket_api.catalog.TaskTypeRepository;
 import com.kasimarket.kasimarket_api.user.Role;
 import com.kasimarket.kasimarket_api.user.User;
 import com.kasimarket.kasimarket_api.user.UserRepository;
+import com.kasimarket.kasimarket_api.user.VettingStatus;
+import com.kasimarket.kasimarket_api.user.WorkerProfile;
+import com.kasimarket.kasimarket_api.user.WorkerProfileRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 // Runs ONCE right after the app starts.
-// DEVELOPMENT ONLY: our database is wiped on every restart,
-// so we recreate the admin and the task list each time.
+// DEVELOPMENT ONLY: our database is wiped on every restart, so we recreate
+// the test people and the task list each time. We delete this before launch.
 @Component
 public class DevDataLoader implements CommandLineRunner {
 
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final WorkerProfileRepository workerProfileRepository;
     private final TaskTypeRepository taskTypeRepository;
+    private final PasswordEncoder passwordEncoder;
 
     // Spring gives us the tools we need.
     public DevDataLoader(UserRepository userRepository,
-                         PasswordEncoder passwordEncoder,
-                         TaskTypeRepository taskTypeRepository) {
+                         WorkerProfileRepository workerProfileRepository,
+                         TaskTypeRepository taskTypeRepository,
+                         PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
+        this.workerProfileRepository = workerProfileRepository;
         this.taskTypeRepository = taskTypeRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
     public void run(String... args) {
-        createAdmin();
+        createPeople();
         createTaskTypes();
     }
 
-    // Nobody can register as ADMIN, so we create one for testing.
-    private void createAdmin() {
-        String adminEmail = "admin@kasimarket.com";
-        if (userRepository.findByEmail(adminEmail).isEmpty()) {
-            User admin = new User();
-            admin.setEmail(adminEmail);
-            admin.setPasswordHash(passwordEncoder.encode("Admin12345"));
-            admin.setRole(Role.ADMIN);
-            userRepository.save(admin);
-            System.out.println("Dev admin created: " + adminEmail);
+    // Creates the admin, one client and two APPROVED tier 1 workers.
+    // The order matters: admin = user 1, Sipho = 2, Thandi = 3, Zanele = 4.
+    // So Thandi's worker profile is number 1 and Zanele's is number 2.
+    private void createPeople() {
+        if (userRepository.findByEmail("admin@kasimarket.com").isPresent()) {
+            return; // already there
         }
+        createUser("admin@kasimarket.com", "Admin12345", Role.ADMIN);
+        createUser("sipho@example.com", "Password123", Role.CLIENT);
+        createWorker("thandi@example.com", "Thandi Nkosi");
+        createWorker("zanele@example.com", "Zanele Khumalo");
+        System.out.println("Dev people created: admin, sipho (client), thandi and zanele (workers)");
+    }
+
+    // Helper: creates a user with a scrambled password.
+    private User createUser(String email, String password, Role role) {
+        User user = new User();
+        user.setEmail(email);
+        user.setPasswordHash(passwordEncoder.encode(password));
+        user.setRole(role);
+        return userRepository.save(user);
+    }
+
+    // Helper: creates a worker whose profile is already APPROVED, so we can test faster.
+    private void createWorker(String email, String fullName) {
+        User user = createUser(email, "Password123", Role.WORKER);
+        WorkerProfile profile = new WorkerProfile();
+        profile.setUser(user);
+        profile.setFullName(fullName);
+        profile.setArea("Randburg");
+        profile.setVettingStatus(VettingStatus.APPROVED);
+        workerProfileRepository.save(profile);
     }
 
     // Puts the starting list of tasks into the database.
-    // These prices are only starting guesses. We will test them in the pilot.
     private void createTaskTypes() {
         if (taskTypeRepository.count() > 0) {
-            return; // already there, nothing to do
+            return;
         }
         // name, category, rand per hour, minimum hours, minimum tier
         addTask("Dog walking", "PET_CARE", 80, 1, 1);
@@ -65,7 +91,6 @@ public class DevDataLoader implements CommandLineRunner {
         System.out.println("Dev task types created: " + taskTypeRepository.count());
     }
 
-    // A small helper so we do not repeat the same lines for every task.
     private void addTask(String name, String category, int rate, int minHours, int minTier) {
         TaskType task = new TaskType();
         task.setName(name);

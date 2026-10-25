@@ -60,6 +60,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/jobs/available", "/api/v1/jobs/my-work").hasRole("WORKER")
                         .requestMatchers(HttpMethod.POST, "/api/v1/jobs/*/accept").hasRole("WORKER")
                         .requestMatchers(HttpMethod.POST, "/api/v1/jobs/*/status").hasRole("WORKER")
+                        // Only the worker can finish a job; only the client can confirm it.
+                        // (Viewing the photo is checked inside the service.)
+                        .requestMatchers(HttpMethod.POST, "/api/v1/jobs/*/complete").hasRole("WORKER")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/jobs/*/confirm").hasRole("CLIENT")
                         // Only clients may book jobs and see their own jobs.
                         // (Workers get their own job addresses in the next step.)
                         .requestMatchers(HttpMethod.POST, "/api/v1/jobs").hasRole("CLIENT")
