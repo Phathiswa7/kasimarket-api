@@ -64,6 +64,7 @@ public class SecurityConfig {
                         // (Viewing the photo is checked inside the service.)
                         .requestMatchers(HttpMethod.POST, "/api/v1/jobs/*/complete").hasRole("WORKER")
                         .requestMatchers(HttpMethod.POST, "/api/v1/jobs/*/confirm").hasRole("CLIENT")
+                        .requestMatchers(HttpMethod.POST, "/api/v1/jobs/*/rating").hasRole("CLIENT")
                         // Only clients may book jobs and see their own jobs.
                         // (Workers get their own job addresses in the next step.)
                         .requestMatchers(HttpMethod.POST, "/api/v1/jobs").hasRole("CLIENT")
