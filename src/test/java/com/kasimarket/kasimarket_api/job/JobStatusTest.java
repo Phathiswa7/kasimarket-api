@@ -27,10 +27,22 @@ class JobStatusTest {
 
     @Test
     void cancellingIsAllowedOnlyBeforeTheWorkStarts() {
+        assertThat(JobStatus.REQUESTED.canMoveTo(JobStatus.CANCELLED)).isTrue();
         assertThat(JobStatus.ACCEPTED.canMoveTo(JobStatus.CANCELLED)).isTrue();
         assertThat(JobStatus.ARRIVED.canMoveTo(JobStatus.CANCELLED)).isTrue();
         // Once the work has started, it cannot be cancelled.
         assertThat(JobStatus.IN_PROGRESS.canMoveTo(JobStatus.CANCELLED)).isFalse();
+    }
+
+    @Test
+    void aWorkerCanDropAJobOnlyBeforeTheWorkStarts() {
+        // Dropping sends the job back to the open list (REQUESTED).
+        assertThat(JobStatus.ACCEPTED.canMoveTo(JobStatus.REQUESTED)).isTrue();
+        assertThat(JobStatus.EN_ROUTE.canMoveTo(JobStatus.REQUESTED)).isTrue();
+        assertThat(JobStatus.ARRIVED.canMoveTo(JobStatus.REQUESTED)).isTrue();
+        // Once the work has started, the worker cannot walk away.
+        assertThat(JobStatus.IN_PROGRESS.canMoveTo(JobStatus.REQUESTED)).isFalse();
+        assertThat(JobStatus.COMPLETED.canMoveTo(JobStatus.REQUESTED)).isFalse();
     }
 
     @Test
