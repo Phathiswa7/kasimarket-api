@@ -20,8 +20,12 @@ public interface JobRepository extends JpaRepository<Job, Long> {
     // Finds all jobs a worker has accepted, newest first.
     List<Job> findByWorkerOrderByAcceptedAtDesc(User worker);
 
-    // NEW: counts a worker's jobs with a given status (we use it to count PAID jobs).
+    // Counts a worker's jobs with a given status (we use it to count PAID jobs).
     long countByWorkerAndStatus(User worker, JobStatus status);
+
+    // NEW: finds jobs with a given status that were opened before a certain time.
+    // We use it to find open jobs that have waited too long.
+    List<Job> findByStatusAndOpenedAtBefore(JobStatus status, LocalDateTime time);
 
     // THE "FIRST TO ACCEPT WINS" RULE.
     // "Give the job to this worker, BUT ONLY IF it is still REQUESTED."
@@ -35,4 +39,14 @@ public interface JobRepository extends JpaRepository<Job, Long> {
                  @Param("now") LocalDateTime now,
                  @Param("requested") JobStatus requested,
                  @Param("accepted") JobStatus accepted);
+
+    // NEW: "Mark this job EXPIRED, BUT ONLY IF it is still REQUESTED."
+    // Same idea as claimJob: if a worker accepts at the very same moment,
+    // only one of them wins, and an accepted job can never be expired by mistake.
+    // It returns how many rows changed: 1 = expired, 0 = someone got there first.
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("update Job j set j.status = :expired where j.id = :id and j.status = :requested")
+    int expireJob(@Param("id") Long id,
+                  @Param("requested") JobStatus requested,
+                  @Param("expired") JobStatus expired);
 }

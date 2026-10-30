@@ -54,6 +54,10 @@ public class Job {
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    // When the job was last put on the open list. It starts when the client books,
+    // and it restarts if a worker drops the job. The expiry timer counts from here.
+    private LocalDateTime openedAt = LocalDateTime.now();
+
     // Set when a worker accepts (used in the next step).
     private LocalDateTime acceptedAt;
 
@@ -95,6 +99,9 @@ public class Job {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public LocalDateTime getOpenedAt() { return openedAt; }
+    public void setOpenedAt(LocalDateTime openedAt) { this.openedAt = openedAt; }
 
     public LocalDateTime getAcceptedAt() { return acceptedAt; }
     public void setAcceptedAt(LocalDateTime acceptedAt) { this.acceptedAt = acceptedAt; }
