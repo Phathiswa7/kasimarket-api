@@ -53,9 +53,8 @@ public class SecurityConfig {
                         // That page must stay open, otherwise every error shows up as 401.
                         .requestMatchers("/error").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
-                        // TEMPORARY: our learning pages and the database viewer stay open.
-                        // We delete these two lines later.
-                        .requestMatchers("/h2-console/**", "/test/**").permitAll()
+                        // The H2 database viewer stays open for local development.
+                        .requestMatchers("/h2-console/**").permitAll()
                         // Only workers may see open jobs, accept them, and see their accepted work.
                         .requestMatchers("/api/v1/jobs/available", "/api/v1/jobs/my-work").hasRole("WORKER")
                         .requestMatchers(HttpMethod.POST, "/api/v1/jobs/*/accept").hasRole("WORKER")
