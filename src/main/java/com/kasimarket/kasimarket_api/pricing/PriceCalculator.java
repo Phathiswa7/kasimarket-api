@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 public class PriceCalculator {
 
     // Urgent jobs cost 30 percent more, because workers must drop everything.
-    private static final double URGENT_MULTIPLIER = 1.30;
+    private static final double URGENT_MULTIPLIER = 1.50;
 
     // The share KasiMarket keeps, read from application.properties (0.20 = 20 percent).
     private final double commissionRate;
