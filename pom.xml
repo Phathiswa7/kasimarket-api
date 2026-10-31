@@ -30,6 +30,12 @@
 		<java.version>25</java.version>
 	</properties>
 	<dependencies>
+		<!-- PostgreSQL connector: lets Java talk to the PostgreSQL database -->
+		<dependency>
+			<groupId>org.postgresql</groupId>
+			<artifactId>postgresql</artifactId>
+			<scope>runtime</scope>
+		</dependency>
 		<!-- JWT library: creates and reads login tokens (jjwt) -->
 		<dependency>
 			<groupId>io.jsonwebtoken</groupId>

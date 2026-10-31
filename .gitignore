@@ -33,3 +33,5 @@ build/
 .vscode/
 # Photos uploaded while testing. We never put these on GitHub.
 uploads/
+# Our private database settings, including the password. Never put this on GitHub.
+application-postgres.properties
