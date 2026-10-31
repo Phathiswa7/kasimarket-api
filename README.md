@@ -4,6 +4,11 @@ An on-demand task marketplace API for South Africa, built with Java and Spring B
 
 KasiMarket connects people who need everyday help (cleaning, laundry, dog walking, babysitting, house watching) with unemployed and under-employed people who are ready to work. Think of it as a ride-hailing app for tasks: the client books, the system sets the price, a verified worker accepts, and the job is tracked from start to payment.
 
+## Try it in your browser
+
+Start the app, then open http://localhost:8081/swagger-ui/index.html to click through the whole API. Log in through `/auth/login`, copy the token, press **Authorize**, and paste it in.
+
+![KasiMarket API in Swagger UI](docs/swagger.png)
 ## Why this project
 
 South Africa has very high unemployment, and many people have no capital, no network and no track record to start earning. KasiMarket gives them a safe, regulated way to build a reputation, and uses that reputation to unlock higher-trust work.

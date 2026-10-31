@@ -52,6 +52,9 @@ public class SecurityConfig {
                         // Spring forwards errors (like "403 Forbidden") to an internal /error page.
                         // That page must stay open, otherwise every error shows up as 401.
                         .requestMatchers("/error").permitAll()
+                        // The API documentation page is open to everyone. The buttons on it
+                        // still need a token to work, so nothing private is exposed.
+                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/api/v1/auth/**").permitAll()
                         // The H2 database viewer stays open for local development.
                         .requestMatchers("/h2-console/**").permitAll()

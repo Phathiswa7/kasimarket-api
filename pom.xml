@@ -30,6 +30,12 @@
 		<java.version>25</java.version>
 	</properties>
 	<dependencies>
+		<!-- springdoc: builds a clickable API page (Swagger UI) from our controllers -->
+		<dependency>
+			<groupId>org.springdoc</groupId>
+			<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+			<version>3.0.3</version>
+		</dependency>
 		<!-- PostgreSQL connector: lets Java talk to the PostgreSQL database -->
 		<dependency>
 			<groupId>org.postgresql</groupId>
