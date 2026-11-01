@@ -21,19 +21,22 @@ public class AuthService {
     private final WorkerProfileRepository workerProfileRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final LoginAttemptLimiter loginAttemptLimiter;
 
     // Spring fills these in automatically when it creates the service.
     public AuthService(UserRepository userRepository,
                        WorkerProfileRepository workerProfileRepository,
                        PasswordEncoder passwordEncoder,
-                       JwtService jwtService) {
+                       JwtService jwtService,
+                       LoginAttemptLimiter loginAttemptLimiter) {
         this.userRepository = userRepository;
         this.workerProfileRepository = workerProfileRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.loginAttemptLimiter = loginAttemptLimiter;
     }
 
-    // ---------- REGISTER (same as before) ----------
+    // ---------- REGISTER ----------
 
     // @Transactional means: do all the saves below as ONE unit.
     // If something fails halfway, nothing is saved.
@@ -78,34 +81,44 @@ public class AuthService {
         return new RegisterResponse(user.getId(), user.getEmail(), user.getRole());
     }
 
-    // ---------- LOGIN (new) ----------
+    // ---------- LOGIN ----------
 
     public LoginResponse login(LoginRequest request) {
 
         // Clean up the email the same way we did when registering.
         String email = request.email().trim().toLowerCase();
 
-        // Look the person up. If the email is unknown, we throw "401 Unauthorized".
-        // We use the SAME message for a wrong email and a wrong password, so an
-        // attacker cannot use our answers to find out which emails are registered.
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED,
-                        "Invalid email or password."));
+        // Step 1: is this email locked because of too many wrong passwords?
+        // If so, this throws "429 Too Many Requests" and we stop right here.
+        loginAttemptLimiter.checkAllowed(email);
 
-        // matches() scrambles the typed password and compares it to the saved hash.
-        // We cannot "unscramble" a hash, so this is the only way to check a password.
-        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+        // Step 2: look the person up. An unknown email counts as a failed attempt too,
+        // so an attacker cannot use the lock to find out which emails are registered.
+        // We use the SAME message for a wrong email and a wrong password.
+        User user = userRepository.findByEmail(email).orElse(null);
+        if (user == null) {
+            loginAttemptLimiter.recordFailure(email);
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
                     "Invalid email or password.");
         }
 
-        // A suspended account is not allowed to log in.
+        // Step 3: matches() scrambles the typed password and compares it to the saved hash.
+        // We cannot "unscramble" a hash, so this is the only way to check a password.
+        if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            loginAttemptLimiter.recordFailure(email);
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "Invalid email or password.");
+        }
+
+        // Step 4: a suspended account is not allowed to log in.
+        // (The password was right, so this is not counted as a failed guess.)
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "This account is not active.");
         }
 
-        // Everything is fine, so make a token and send it back.
+        // Step 5: success. Forget earlier wrong guesses, make a token, and send it back.
+        loginAttemptLimiter.recordSuccess(email);
         String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
         return new LoginResponse(token, user.getEmail(), user.getRole());
     }

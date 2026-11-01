@@ -113,6 +113,7 @@ Unit tests cover the pricing maths, the job journey rulebook and the tier rules.
 - **Secrets stay out of Git.** The database password lives in a Git-ignored profile file.
 - **Safety by design.** Sensitive tasks are gated by admin approval, addresses are hidden until acceptance, and the same error message is used for a wrong email and a wrong password.
 - **Safe by default in production.** A separate `prod` profile reads every secret from environment variables, switches off the test accounts, the H2 console and the API docs, and a startup guard refuses to run if any of these is unsafe. The first admin comes from private settings.
+- **Password guessing is slowed down.** Five wrong passwords for the same email within 15 minutes lock that email for 15 minutes (HTTP 429). Unknown emails are locked the same way, so the lock cannot be used to find out which emails are registered. The limit is in memory and per server, so a bigger deployment would move it to a shared store.
 
 ## Roadmap
 
