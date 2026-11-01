@@ -58,6 +58,11 @@ public class Job {
     // and it restarts if a worker drops the job. The expiry timer counts from here.
     private LocalDateTime openedAt = LocalDateTime.now();
 
+    // Where the work happens, as GPS coordinates (the phone sends these).
+    // "Double" with a capital D can be empty (null), so older jobs without a location still load.
+    private Double latitude;
+    private Double longitude;
+
     // Set when a worker accepts (used in the next step).
     private LocalDateTime acceptedAt;
 
@@ -102,6 +107,12 @@ public class Job {
 
     public LocalDateTime getOpenedAt() { return openedAt; }
     public void setOpenedAt(LocalDateTime openedAt) { this.openedAt = openedAt; }
+
+    public Double getLatitude() { return latitude; }
+    public void setLatitude(Double latitude) { this.latitude = latitude; }
+
+    public Double getLongitude() { return longitude; }
+    public void setLongitude(Double longitude) { this.longitude = longitude; }
 
     public LocalDateTime getAcceptedAt() { return acceptedAt; }
     public void setAcceptedAt(LocalDateTime acceptedAt) { this.acceptedAt = acceptedAt; }

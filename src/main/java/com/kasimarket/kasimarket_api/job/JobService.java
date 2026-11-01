@@ -13,7 +13,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
-// The business rules for booking and viewing jobs.
+// The business rules for booking and viewing jobs (the client's side).
 @Service
 public class JobService {
 
@@ -63,6 +63,12 @@ public class JobService {
         job.setTaskType(task);
         job.setAddress(request.address().trim());
         job.setNotes(request.notes());
+
+        // THE LINES THAT MAKE PROXIMITY WORK: save where the job is, as GPS coordinates.
+        // Without these, a job has no position and every worker counts as "too far".
+        job.setLatitude(request.latitude());
+        job.setLongitude(request.longitude());
+
         job.setHours(quote.hours());           // the charged hours (minimum applied)
         job.setUrgent(quote.urgent());
         job.setTotalPrice(quote.totalPrice());

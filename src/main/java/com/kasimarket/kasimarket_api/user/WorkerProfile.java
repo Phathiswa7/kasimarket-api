@@ -2,6 +2,8 @@ package com.kasimarket.kasimarket_api.user;
 
 import jakarta.persistence.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "worker_profiles")
 public class WorkerProfile {
@@ -33,6 +35,12 @@ public class WorkerProfile {
 
     private boolean online = false;
 
+    // The worker's last shared position. It is erased when the worker goes offline,
+    // because we only keep location while someone is active.
+    private Double lastLatitude;
+    private Double lastLongitude;
+    private LocalDateTime locationUpdatedAt;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -59,4 +67,13 @@ public class WorkerProfile {
 
     public boolean isOnline() { return online; }
     public void setOnline(boolean online) { this.online = online; }
+
+    public Double getLastLatitude() { return lastLatitude; }
+    public void setLastLatitude(Double lastLatitude) { this.lastLatitude = lastLatitude; }
+
+    public Double getLastLongitude() { return lastLongitude; }
+    public void setLastLongitude(Double lastLongitude) { this.lastLongitude = lastLongitude; }
+
+    public LocalDateTime getLocationUpdatedAt() { return locationUpdatedAt; }
+    public void setLocationUpdatedAt(LocalDateTime locationUpdatedAt) { this.locationUpdatedAt = locationUpdatedAt; }
 }

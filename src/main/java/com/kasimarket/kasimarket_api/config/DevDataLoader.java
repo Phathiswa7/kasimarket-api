@@ -11,6 +11,7 @@ import com.kasimarket.kasimarket_api.user.WorkerProfileRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
+import java.time.LocalDateTime;
 
 // Runs ONCE right after the app starts.
 // DEVELOPMENT ONLY: our database is wiped on every restart, so we recreate
@@ -71,6 +72,11 @@ public class DevDataLoader implements CommandLineRunner {
         profile.setFullName(fullName);
         profile.setArea("Randburg");
         profile.setVettingStatus(VettingStatus.APPROVED);
+        // Start the test workers online in Randburg, so the automatic tests can use them.
+        profile.setLastLatitude(-26.0936);
+        profile.setLastLongitude(28.0064);
+        profile.setLocationUpdatedAt(LocalDateTime.now());
+        profile.setOnline(true);
         workerProfileRepository.save(profile);
     }
 

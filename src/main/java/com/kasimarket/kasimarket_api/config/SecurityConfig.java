@@ -70,6 +70,8 @@ public class SecurityConfig {
                         // Only the client can cancel a job; only the worker can drop one.
                         .requestMatchers(HttpMethod.POST, "/api/v1/jobs/*/cancel").hasRole("CLIENT")
                         .requestMatchers(HttpMethod.POST, "/api/v1/jobs/*/drop").hasRole("WORKER")
+                        // Only workers can go online, share their position and go offline.
+                        .requestMatchers("/api/v1/workers/me/**").hasRole("WORKER")
                         // Only clients may book jobs and see their own jobs.
                         // (Workers get their own job addresses in the next step.)
                         .requestMatchers(HttpMethod.POST, "/api/v1/jobs").hasRole("CLIENT")

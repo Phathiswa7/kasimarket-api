@@ -148,15 +148,18 @@ class FullJourneyIntegrationTest {
     @Order(4)
     void theClientBooksTwoJobsAndTheSystemSetsThePrice() throws Exception {
         // Task 1 is Dog walking (R80 an hour) and task 7 is Babysitting (R60 an hour, 3 hour minimum).
+        // Both jobs are in Randburg, where the test workers are. Latitude and longitude are GPS coordinates.
         Reply dog = call("POST", "/jobs", clientToken,
-                "{\"taskTypeId\":1,\"hours\":1,\"urgent\":false,\"address\":\"12 Main Road, Randburg\"}");
+                "{\"taskTypeId\":1,\"hours\":1,\"urgent\":false,\"address\":\"12 Main Road, Randburg\","
+                        + "\"latitude\":-26.1100,\"longitude\":28.0200}");
         assertThat(dog.status()).isEqualTo(201);
         assertThat(dog.body()).contains("\"totalPrice\":80");
         dogJobId = find(dog.body(), "\"id\":(\\d+)");
 
         // We ask for 2 hours, but babysitting has a 3 hour minimum, so 3 x R60 = R180.
         Reply baby = call("POST", "/jobs", clientToken,
-                "{\"taskTypeId\":7,\"hours\":2,\"urgent\":false,\"address\":\"12 Main Road, Randburg\"}");
+                "{\"taskTypeId\":7,\"hours\":2,\"urgent\":false,\"address\":\"12 Main Road, Randburg\","
+                        + "\"latitude\":-26.1100,\"longitude\":28.0200}");
         assertThat(baby.status()).isEqualTo(201);
         assertThat(baby.body()).contains("\"totalPrice\":180");
         babysittingJobId = find(baby.body(), "\"id\":(\\d+)");
@@ -278,5 +281,44 @@ class FullJourneyIntegrationTest {
     void onlyAdminsCanUseAdminAddresses() throws Exception {
         assertThat(call("GET", "/admin/workers", thandiToken, null).status()).isEqualTo(403);
         assertThat(call("GET", "/admin/workers", adminToken, null).status()).isEqualTo(200);
+    }
+
+    @Test
+    @Order(14)
+    void aWorkerFarAwayCannotSeeOrTakeAJob() throws Exception {
+        // The client books a new dog walking job in Randburg.
+        Reply near = call("POST", "/jobs", clientToken,
+                "{\"taskTypeId\":1,\"hours\":1,\"urgent\":false,\"address\":\"12 Main Road, Randburg\","
+                        + "\"latitude\":-26.1100,\"longitude\":28.0200}");
+        assertThat(near.status()).isEqualTo(201);
+        String jobId = find(near.body(), "\"id\":(\\d+)");
+
+        // A booking with no GPS position is refused.
+        assertThat(call("POST", "/jobs", clientToken,
+                "{\"taskTypeId\":1,\"hours\":1,\"urgent\":false,\"address\":\"12 Main Road\"}").status())
+                .isEqualTo(400);
+
+        // Zanele travels to Cape Town (about 1250 km away) and shares her position.
+        assertThat(call("PUT", "/workers/me/location", zaneleToken,
+                "{\"latitude\":-33.9249,\"longitude\":18.4241}").status()).isEqualTo(200);
+
+        // From Cape Town she sees no jobs, and she cannot accept one by guessing its number.
+        Reply farList = call("GET", "/jobs/available", zaneleToken, null);
+        assertThat(farList.status()).isEqualTo(200);
+        assertThat(farList.body().trim()).isEqualTo("[]");
+        assertThat(call("POST", "/jobs/" + jobId + "/accept", zaneleToken, null).status()).isEqualTo(403);
+
+        // She comes back to Randburg. Now she sees the job, with an approximate distance
+        // and without the exact address.
+        assertThat(call("PUT", "/workers/me/location", zaneleToken,
+                "{\"latitude\":-26.0936,\"longitude\":28.0064}").status()).isEqualTo(200);
+        Reply nearList = call("GET", "/jobs/available", zaneleToken, null);
+        assertThat(nearList.status()).isEqualTo(200);
+        assertThat(nearList.body()).contains("\"id\":" + jobId).contains("\"distanceKm\":2.5");
+        assertThat(nearList.body()).doesNotContain("Main Road");
+
+        // Going offline erases her position, so she must share it again before seeing jobs.
+        assertThat(call("POST", "/workers/me/offline", zaneleToken, null).status()).isEqualTo(200);
+        assertThat(call("GET", "/jobs/available", zaneleToken, null).status()).isEqualTo(409);
     }
 }
