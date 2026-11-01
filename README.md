@@ -64,7 +64,7 @@ spring.jpa.hibernate.ddl-auto=update
 
 ### Test accounts (development only)
 
-On startup the app creates these accounts so you can try it straight away. They exist only for development and must be removed before any real launch.
+On startup in development the app creates these accounts so you can try it straight away. They are controlled by `kasimarket.dev-data.enabled`, which is `true` in development and forced to `false` by the `prod` profile. The app also refuses to start in production if that setting is on.
 
 | Role | Email | Password |
 |---|---|---|
@@ -112,6 +112,7 @@ Unit tests cover the pricing maths, the job journey rulebook and the tier rules.
 - **Prices are fixed at booking.** Changing a task's rate later never changes an old job.
 - **Secrets stay out of Git.** The database password lives in a Git-ignored profile file.
 - **Safety by design.** Sensitive tasks are gated by admin approval, addresses are hidden until acceptance, and the same error message is used for a wrong email and a wrong password.
+- **Safe by default in production.** A separate `prod` profile reads every secret from environment variables, switches off the test accounts, the H2 console and the API docs, and a startup guard refuses to run if any of these is unsafe. The first admin comes from private settings.
 
 ## Roadmap
 
