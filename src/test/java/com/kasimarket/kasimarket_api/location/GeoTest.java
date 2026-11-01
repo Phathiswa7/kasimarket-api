@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-// Checks the distance maths with places whose distances we know.
+// Checks the distance and time maths with places whose distances we know.
 class GeoTest {
 
     // Randburg town centre and Johannesburg city centre (GPS coordinates).
@@ -44,5 +44,24 @@ class GeoTest {
         assertThat(Geo.approximateKm(2.2)).isEqualTo(2.0);
         assertThat(Geo.approximateKm(2.3)).isEqualTo(2.5);
         assertThat(Geo.approximateKm(9.9)).isEqualTo(10.0);
+    }
+
+    @Test
+    void etaAddsRoadDistanceAndRoundsUp() {
+        // 5 km in a straight line becomes 6.5 km of road. At 25 km/h that is 15.6 minutes,
+        // which we round UP to 16, so the client is never promised too little time.
+        assertThat(Geo.etaMinutes(5.0, 25.0, 1.3)).isEqualTo(16);
+    }
+
+    @Test
+    void etaIsNeverLessThanOneMinute() {
+        // Even a worker 100 metres away needs at least "1 minute".
+        assertThat(Geo.etaMinutes(0.1, 25.0, 1.3)).isEqualTo(1);
+        assertThat(Geo.etaMinutes(0.0, 25.0, 1.3)).isEqualTo(1);
+    }
+
+    @Test
+    void aFasterAverageSpeedGivesAShorterTime() {
+        assertThat(Geo.etaMinutes(10.0, 50.0, 1.3)).isLessThan(Geo.etaMinutes(10.0, 25.0, 1.3));
     }
 }

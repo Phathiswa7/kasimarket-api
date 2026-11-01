@@ -31,4 +31,15 @@ public final class Geo {
     public static double approximateKm(double km) {
         return Math.max(0.5, Math.round(km * 2) / 2.0);
     }
+
+    // NEW: estimates the travel time in whole minutes.
+    // Roads are longer than a straight line, so we multiply the distance by a road factor
+    // (for example 1.3), then divide by the average speed. We always round UP, so a client
+    // is never told "3 minutes" when it will really take 3 minutes and 40 seconds.
+    // The answer is never less than 1 minute.
+    public static int etaMinutes(double straightKm, double speedKmh, double roadFactor) {
+        double roadKm = straightKm * roadFactor;
+        double minutes = roadKm / speedKmh * 60.0;
+        return (int) Math.max(1, Math.ceil(minutes));
+    }
 }
