@@ -3,12 +3,16 @@ package com.kasimarket.kasimarket_api.admin;
 import com.kasimarket.kasimarket_api.user.VettingStatus;
 import com.kasimarket.kasimarket_api.user.WorkerProfile;
 import com.kasimarket.kasimarket_api.user.WorkerProfileRepository;
+import com.kasimarket.kasimarket_api.vetting.VettingDocument;
+import com.kasimarket.kasimarket_api.vetting.VettingDocumentRepository;
+import com.kasimarket.kasimarket_api.vetting.VettingRules;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.List;
 
 // The business rules for admin actions on workers.
@@ -16,18 +20,25 @@ import java.util.List;
 public class AdminService {
 
     private final WorkerProfileRepository workerProfileRepository;
+    private final VettingDocumentRepository vettingDocumentRepository;
 
     // The extra requirements for tier 3, read from application.properties.
     private final int tier3MinJobs;
     private final double tier3MinRating;
 
-    // Spring gives us the repository, and @Value reads the two settings.
+    // When true, approving a worker needs reviewed documents (switched on in production).
+    private final boolean vettingRequired;
+
     public AdminService(WorkerProfileRepository workerProfileRepository,
+                        VettingDocumentRepository vettingDocumentRepository,
                         @Value("${tier.tier3-min-jobs}") int tier3MinJobs,
-                        @Value("${tier.tier3-min-rating}") double tier3MinRating) {
+                        @Value("${tier.tier3-min-rating}") double tier3MinRating,
+                        @Value("${vetting.required-for-approval:false}") boolean vettingRequired) {
         this.workerProfileRepository = workerProfileRepository;
+        this.vettingDocumentRepository = vettingDocumentRepository;
         this.tier3MinJobs = tier3MinJobs;
         this.tier3MinRating = tier3MinRating;
+        this.vettingRequired = vettingRequired;
     }
 
     // Lists workers. If a status is given (like SUBMITTED), only those are returned.
@@ -52,13 +63,26 @@ public class AdminService {
         }
 
         WorkerProfile profile = findProfile(workerId);
+
+        // NEW: approving a worker needs checked documents (when the rule is switched on).
+        // Rejecting or suspending never needs documents.
+        if (newStatus == VettingStatus.APPROVED && vettingRequired) {
+            List<VettingDocument> documents = vettingDocumentRepository.findByWorkerOrderByUploadedAtDesc(profile);
+            List<String> missing = VettingRules.missingForApproval(documents, LocalDate.now());
+            if (!missing.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "This worker cannot be approved yet. Still needed: "
+                                + String.join("; ", missing) + ".");
+            }
+        }
+
         profile.setVettingStatus(newStatus);
         workerProfileRepository.save(profile);
 
         return toSummary(profile);
     }
 
-    // NEW: an admin grants tier 3, or takes it away (tier 2 = back to automatic).
+    // An admin grants tier 3, or takes it away (tier 2 = back to automatic).
     @Transactional
     public WorkerSummary changeTier(Long workerId, TierChangeRequest request) {
         WorkerProfile profile = findProfile(workerId);

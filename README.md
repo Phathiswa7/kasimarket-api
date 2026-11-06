@@ -27,6 +27,7 @@ South Africa has very high unemployment, and many people have no capital, no net
 - **Expiry:** open jobs nobody accepts expire automatically after a set time.
 - **Ratings:** clients rate workers after a paid job, and the ratings feed the trust ladder.
 - **Simulated payments:** payment records are real, but no money moves yet.
+- **Vetting documents:** workers upload an ID and a police clearance (PDF, JPEG or PNG, checked by file contents). An admin accepts or rejects each one, with a written reason for rejections. In production a worker cannot be approved without an accepted ID and an accepted, unexpired clearance.
 
 ## Tech stack
 
@@ -97,6 +98,12 @@ All addresses start with `/api/v1`. Everything except `auth` needs a token: `Aut
 | GET /admin/workers | admin | List workers, optionally by status |
 | PUT /admin/workers/{id}/decision | admin | Approve, reject or suspend a worker |
 | PUT /admin/workers/{id}/tier | admin | Grant tier 3 (or set back to 2) |
+| POST /workers/me/documents | worker | Upload an ID, police clearance or reference (multipart form) |
+| GET /workers/me/documents | worker | My documents and their review status |
+| GET /admin/vetting/workers/{id}/documents | admin | A worker's documents |
+| GET /admin/vetting/documents/{id}/file | admin | Download a document |
+| PUT /admin/vetting/documents/{id}/review | admin | Accept or reject a document |
+
 
 ## Tests
 
@@ -114,6 +121,8 @@ Unit tests cover the pricing maths, the job journey rulebook and the tier rules.
 - **Safety by design.** Sensitive tasks are gated by admin approval, addresses are hidden until acceptance, and the same error message is used for a wrong email and a wrong password.
 - **Safe by default in production.** A separate `prod` profile reads every secret from environment variables, switches off the test accounts, the H2 console and the API docs, and a startup guard refuses to run if any of these is unsafe. The first admin comes from private settings.
 - **Password guessing is slowed down.** Five wrong passwords for the same email within 15 minutes lock that email for 15 minutes (HTTP 429). Unknown emails are locked the same way, so the lock cannot be used to find out which emails are registered. The limit is in memory and per server, so a bigger deployment would move it to a shared store.
+- **Documents are private by design.** Files are stored under random names, only admins can open them, and the production profile switches on the rule that approval needs reviewed documents. The startup guard refuses to run without it. Documents are not yet encrypted at rest or audit-logged: that comes with the move to encrypted cloud storage.
+
 
 ## Roadmap
 

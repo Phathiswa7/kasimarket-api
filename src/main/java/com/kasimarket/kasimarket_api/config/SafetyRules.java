@@ -13,10 +13,19 @@ public final class SafetyRules {
     private SafetyRules() {
     }
 
-    // Returns a list of problems. An empty list means the settings are safe.
+    // The original check, kept so older code and tests still work.
+    // It assumes the vetting rule is fine.
     public static List<String> problems(boolean devDataEnabled,
                                         String jwtSecret,
                                         boolean h2ConsoleEnabled) {
+        return problems(devDataEnabled, jwtSecret, h2ConsoleEnabled, true);
+    }
+
+    // The full check. Returns a list of problems. An empty list means the settings are safe.
+    public static List<String> problems(boolean devDataEnabled,
+                                        String jwtSecret,
+                                        boolean h2ConsoleEnabled,
+                                        boolean vettingRequired) {
         List<String> problems = new ArrayList<>();
 
         if (devDataEnabled) {
@@ -30,6 +39,10 @@ public final class SafetyRules {
         }
         if (h2ConsoleEnabled) {
             problems.add("the H2 database console is switched on");
+        }
+        if (!vettingRequired) {
+            problems.add("workers can be approved without reviewed documents "
+                    + "(vetting.required-for-approval must be true)");
         }
         return problems;
     }
