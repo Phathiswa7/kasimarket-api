@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#1B5E3F">
+  <title>KasiMarket</title>
+  <!-- A tiny built-in icon, so the browser does not ask the server for a favicon file. -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231B5E3F'/%3E%3Ctext x='16' y='23' font-size='20' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='bold'%3EK%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <!-- The top bar: the brand, and who is logged in. Filled in by js/app.js -->
+  <header id="topbar"></header>
+
+  <!-- The main area: every screen is drawn here. -->
+  <main id="view" aria-live="polite"></main>
+
+  <!-- The bottom menu (like a phone app). Filled in by js/app.js -->
+  <nav id="tabs" aria-label="Main menu" hidden></nav>
+
+  <!-- A small message that pops up for a few seconds. -->
+  <div id="toast" role="status"></div>
+
+  <noscript><p class="card">KasiMarket needs JavaScript to run. Please turn it on in your browser.</p></noscript>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

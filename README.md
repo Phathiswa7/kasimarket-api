@@ -28,6 +28,7 @@ South Africa has very high unemployment, and many people have no capital, no net
 - **Ratings:** clients rate workers after a paid job, and the ratings feed the trust ladder.
 - **Simulated payments:** payment records are real, but no money moves yet.
 - **Vetting documents:** workers upload an ID and a police clearance (PDF, JPEG or PNG, checked by file contents). An admin accepts or rejects each one, with a written reason for rejections. In production a worker cannot be approved without an accepted ID and an accepted, unexpired clearance.
+- **Mobile-first web app:** plain HTML, CSS and JavaScript served by the same Spring Boot app (no framework, no build step). Clients book and follow a job live, workers go online and work through a job, and admins review workers, documents and incidents. Screens run at http://localhost:8081/.
 
 ## Tech stack
 
