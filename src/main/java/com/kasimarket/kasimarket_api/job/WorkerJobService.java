@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -19,6 +20,12 @@ import java.util.List;
 // The business rules for what a worker may see, accept and update.
 @Service
 public class WorkerJobService {
+
+    // After this many wrong start codes, the job is locked until staff or the client step in.
+    private static final int MAX_CODE_ATTEMPTS = 5;
+
+    // A secure random number maker. We use it for the start code, so codes cannot be guessed.
+    private static final SecureRandom RANDOM = new SecureRandom();
 
     private final JobRepository jobRepository;
     private final JobEventRepository jobEventRepository;
@@ -28,17 +35,23 @@ public class WorkerJobService {
     // Workers only see and accept jobs within this many km (from application.properties).
     private final double radiusKm;
 
-    // Spring gives us the tools automatically, and @Value reads the radius setting.
+    // When true, a worker CANNOT start the work without the client's start code (production).
+    // When false (development), the code is optional, but if one is typed it must be right.
+    private final boolean requireStartCode;
+
+    // Spring gives us the tools automatically, and @Value reads the settings.
     public WorkerJobService(JobRepository jobRepository,
                             JobEventRepository jobEventRepository,
                             UserRepository userRepository,
                             WorkerProfileRepository workerProfileRepository,
-                            @Value("${jobs.search-radius-km}") double radiusKm) {
+                            @Value("${jobs.search-radius-km}") double radiusKm,
+                            @Value("${jobs.require-start-code:false}") boolean requireStartCode) {
         this.jobRepository = jobRepository;
         this.jobEventRepository = jobEventRepository;
         this.userRepository = userRepository;
         this.workerProfileRepository = workerProfileRepository;
         this.radiusKm = radiusKm;
+        this.requireStartCode = requireStartCode;
     }
 
     // A job together with its distance from one worker. Only used inside this class.
@@ -82,7 +95,7 @@ public class WorkerJobService {
 
         Job job = findJob(jobId);
 
-        // Trust ladder: a tier 1 worker may not take a tier 3 job like babysitting.
+        // Trust ladder: a tier 1 worker may not take a tier 3 job.
         if (profile.getTier() < job.getTaskType().getMinTier()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "This job needs tier " + job.getTaskType().getMinTier()
@@ -112,6 +125,11 @@ public class WorkerJobService {
         // Load the job again so we see its new status and worker.
         Job accepted = findJob(jobId);
 
+        // Make the start code. The CLIENT can see it, the worker cannot.
+        accepted.setStartCode(newStartCode());
+        accepted.setStartCodeAttempts(0);
+        jobRepository.save(accepted);
+
         // Write this step into the job's history.
         jobEventRepository.save(new JobEvent(accepted, JobStatus.ACCEPTED));
 
@@ -119,8 +137,10 @@ public class WorkerJobService {
     }
 
     // The worker moves their job to the next stage (on the way, arrived, in progress).
-    @Transactional
-    public WorkerJobView updateStatus(String workerEmail, Long jobId, JobStatus newStatus) {
+    // noRollbackFor: when a wrong code is typed, we throw an error, but we STILL want to keep
+    // the "one more wrong attempt" count. Without this, the error would undo the count.
+    @Transactional(noRollbackFor = ResponseStatusException.class)
+    public WorkerJobView updateStatus(String workerEmail, Long jobId, JobStatus newStatus, String code) {
         requireApprovedWorker(workerEmail);
 
         Job job = findJob(jobId);
@@ -147,6 +167,11 @@ public class WorkerJobService {
                     "A job that is " + job.getStatus() + " cannot move to " + newStatus + ".");
         }
 
+        // Rule 4: starting the work needs the client's start code (in production).
+        if (newStatus == JobStatus.IN_PROGRESS) {
+            checkStartCode(job, code);
+        }
+
         // All good: change the stage, save it, and write it into the history.
         job.setStatus(newStatus);
         jobRepository.save(job);
@@ -164,6 +189,40 @@ public class WorkerJobService {
                 .stream()
                 .map(this::toWorkerView)
                 .toList();
+    }
+
+    // Checks the start code the worker typed.
+    private void checkStartCode(Job job, String code) {
+        boolean typed = code != null && !code.isBlank();
+
+        // No code typed: refuse in production, allow in development.
+        if (!typed) {
+            if (requireStartCode) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Ask the client for their 4-digit start code.");
+            }
+            return;
+        }
+
+        // Too many wrong tries: lock, so the code cannot be guessed (only 10,000 possibilities).
+        int attempts = job.getStartCodeAttempts() == null ? 0 : job.getStartCodeAttempts();
+        if (attempts >= MAX_CODE_ATTEMPTS) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                    "Too many wrong codes. Please contact KasiMarket support.");
+        }
+
+        // A wrong code counts as a failed attempt.
+        if (job.getStartCode() == null || !job.getStartCode().equals(code.trim())) {
+            job.setStartCodeAttempts(attempts + 1);
+            jobRepository.save(job);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "That code is not right. Check it with the client.");
+        }
+    }
+
+    // Makes a random 4-digit code such as "0472" or "4821".
+    private String newStartCode() {
+        return String.format("%04d", RANDOM.nextInt(10000));
     }
 
     // Helper: the distance in km between a worker and a job.

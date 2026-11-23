@@ -23,7 +23,10 @@ public interface JobRepository extends JpaRepository<Job, Long> {
     // Counts a worker's jobs with a given status (we use it to count PAID jobs).
     long countByWorkerAndStatus(User worker, JobStatus status);
 
-    // NEW: finds jobs with a given status that were opened before a certain time.
+    // Counts all jobs with a given status (for the staff dashboard).
+    long countByStatus(JobStatus status);
+
+    // Finds jobs with a given status that were opened before a certain time.
     // We use it to find open jobs that have waited too long.
     List<Job> findByStatusAndOpenedAtBefore(JobStatus status, LocalDateTime time);
 
@@ -40,7 +43,7 @@ public interface JobRepository extends JpaRepository<Job, Long> {
                  @Param("requested") JobStatus requested,
                  @Param("accepted") JobStatus accepted);
 
-    // NEW: "Mark this job EXPIRED, BUT ONLY IF it is still REQUESTED."
+    // "Mark this job EXPIRED, BUT ONLY IF it is still REQUESTED."
     // Same idea as claimJob: if a worker accepts at the very same moment,
     // only one of them wins, and an accepted job can never be expired by mistake.
     // It returns how many rows changed: 1 = expired, 0 = someone got there first.

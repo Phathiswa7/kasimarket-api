@@ -41,6 +41,34 @@ public class WorkerProfile {
     private Double lastLongitude;
     private LocalDateTime locationUpdatedAt;
 
+    // === NEW: Psychometric, 20-Min Skill Exam, Academy & Trust Score ===
+    private Integer psychometricScore;
+    private String psychometricStatus = "NOT_TAKEN"; // PASSED, REVIEW_REQUIRED, FAILED
+    private String certifiedCategories = "";
+    private Integer lastExamScore;
+    private Integer coursesCompleted = 0;
+    private Integer rewardPoints = 0;
+    private Double trustScore = 20.0;
+
+
+    @PrePersist
+    @PreUpdate
+    public void recalculateTrustScore() {
+        // Safe for primitive double & int (no null check on primitives)
+        double ratingVal = (this.avgRating > 0) ? this.avgRating : 5.0;
+        int jobsVal = Math.max(this.jobsCompleted, 0);
+        int coursesVal = (this.coursesCompleted != null) ? this.coursesCompleted : 0;
+
+        double ratingComponent = (ratingVal / 5.0) * 40.0;
+        double jobsComponent = Math.min(jobsVal * 1.2, 30.0);
+        double courseComponent = Math.min(coursesVal * 5.0, 20.0);
+        double psychComponent = "PASSED".equals(this.psychometricStatus) ? 10.0 : 0.0;
+
+        this.trustScore = Math.round((ratingComponent + jobsComponent + courseComponent + psychComponent) * 10.0) / 10.0;
+    }
+
+
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -76,4 +104,19 @@ public class WorkerProfile {
 
     public LocalDateTime getLocationUpdatedAt() { return locationUpdatedAt; }
     public void setLocationUpdatedAt(LocalDateTime locationUpdatedAt) { this.locationUpdatedAt = locationUpdatedAt; }
+
+    public Integer getPsychometricScore() { return psychometricScore; }
+    public void setPsychometricScore(Integer psychometricScore) { this.psychometricScore = psychometricScore; }
+    public String getPsychometricStatus() { return psychometricStatus; }
+    public void setPsychometricStatus(String psychometricStatus) { this.psychometricStatus = psychometricStatus; }
+    public String getCertifiedCategories() { return certifiedCategories; }
+    public void setCertifiedCategories(String certifiedCategories) { this.certifiedCategories = certifiedCategories; }
+    public Integer getLastExamScore() { return lastExamScore; }
+    public void setLastExamScore(Integer lastExamScore) { this.lastExamScore = lastExamScore; }
+    public Integer getCoursesCompleted() { return coursesCompleted; }
+    public void setCoursesCompleted(Integer coursesCompleted) { this.coursesCompleted = coursesCompleted; }
+    public Integer getRewardPoints() { return rewardPoints; }
+    public void setRewardPoints(Integer rewardPoints) { this.rewardPoints = rewardPoints; }
+    public Double getTrustScore() { return trustScore; }
+    public void setTrustScore(Double trustScore) { this.trustScore = trustScore; }
 }

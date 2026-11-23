@@ -54,6 +54,9 @@ public class Job {
 
     private LocalDateTime createdAt = LocalDateTime.now();
 
+    // Set when a worker accepts.
+    private LocalDateTime acceptedAt;
+
     // When the job was last put on the open list. It starts when the client books,
     // and it restarts if a worker drops the job. The expiry timer counts from here.
     private LocalDateTime openedAt = LocalDateTime.now();
@@ -63,8 +66,12 @@ public class Job {
     private Double latitude;
     private Double longitude;
 
-    // Set when a worker accepts (used in the next step).
-    private LocalDateTime acceptedAt;
+    // The 4-digit start code. It is made when a worker accepts. The CLIENT sees it and reads it out
+    // when the worker arrives; the worker must type it to start the work. That proves the right
+    // person is at the right door. These two use capital-letter types (null allowed) so that
+    // jobs saved before this feature still load, and the database can add the columns safely.
+    private String startCode;
+    private Integer startCodeAttempts;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -105,6 +112,9 @@ public class Job {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
+    public LocalDateTime getAcceptedAt() { return acceptedAt; }
+    public void setAcceptedAt(LocalDateTime acceptedAt) { this.acceptedAt = acceptedAt; }
+
     public LocalDateTime getOpenedAt() { return openedAt; }
     public void setOpenedAt(LocalDateTime openedAt) { this.openedAt = openedAt; }
 
@@ -114,6 +124,9 @@ public class Job {
     public Double getLongitude() { return longitude; }
     public void setLongitude(Double longitude) { this.longitude = longitude; }
 
-    public LocalDateTime getAcceptedAt() { return acceptedAt; }
-    public void setAcceptedAt(LocalDateTime acceptedAt) { this.acceptedAt = acceptedAt; }
+    public String getStartCode() { return startCode; }
+    public void setStartCode(String startCode) { this.startCode = startCode; }
+
+    public Integer getStartCodeAttempts() { return startCodeAttempts; }
+    public void setStartCodeAttempts(Integer startCodeAttempts) { this.startCodeAttempts = startCodeAttempts; }
 }

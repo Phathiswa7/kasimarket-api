@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+
 import java.time.LocalDateTime;
 
 // The rules for cancelling a job (client) and dropping a job (worker).
@@ -62,9 +63,12 @@ public class JobCancellationService {
                     "A job that is " + job.getStatus() + " cannot be dropped.");
         }
 
-        // Put the job back on the open list: no worker, not accepted.
+        // Put the job back on the open list: no worker, not accepted, and no start code
+        // (the next worker who accepts gets a fresh one).
         job.setWorker(null);
         job.setAcceptedAt(null);
+        job.setStartCode(null);
+        job.setStartCodeAttempts(null);
         // The job is open again, so its expiry timer starts again from now.
         job.setOpenedAt(LocalDateTime.now());
         job.setStatus(JobStatus.REQUESTED);

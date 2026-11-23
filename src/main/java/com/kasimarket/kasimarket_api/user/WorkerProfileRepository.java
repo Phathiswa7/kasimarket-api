@@ -13,4 +13,7 @@ public interface WorkerProfileRepository extends JpaRepository<WorkerProfile, Lo
     // Finds all workers with a given vetting status, for example SUBMITTED.
     // Spring writes the SQL itself, just from this method name.
     List<WorkerProfile> findByVettingStatus(VettingStatus vettingStatus);
+
+    // Counts the workers with a given vetting status (for the staff dashboard).
+    long countByVettingStatus(VettingStatus vettingStatus);
 }

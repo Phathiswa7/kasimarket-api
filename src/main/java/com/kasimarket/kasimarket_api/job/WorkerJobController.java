@@ -23,7 +23,7 @@ public class WorkerJobController {
         this.workerJobService = workerJobService;
     }
 
-    // GET /api/v1/jobs/available  (open jobs this worker may take)
+    // GET /api/v1/jobs/available  (open jobs this worker may take, nearest first)
     @GetMapping("/available")
     public List<AvailableJobView> available(Authentication authentication) {
         return workerJobService.listAvailable(authentication.getName());
@@ -36,12 +36,12 @@ public class WorkerJobController {
     }
 
     // POST /api/v1/jobs/5/status  with body {"status":"EN_ROUTE"}
-    // Moves job number 5 to its next stage.
+    // Moves job number 5 to its next stage. Starting the work also needs the client's code.
     @PostMapping("/{id}/status")
     public WorkerJobView updateStatus(Authentication authentication,
                                       @PathVariable Long id,
                                       @Valid @RequestBody StatusChangeRequest request) {
-        return workerJobService.updateStatus(authentication.getName(), id, request.status());
+        return workerJobService.updateStatus(authentication.getName(), id, request.status(), request.code());
     }
 
     // GET /api/v1/jobs/my-work  (jobs this worker has accepted)

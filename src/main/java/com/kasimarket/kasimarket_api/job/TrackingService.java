@@ -11,7 +11,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
 
 // Works out what the client should see about their job: who is coming,
-// how many minutes away they are, and a friendly sentence.
+// how many minutes away they are, the start code, and a friendly sentence.
 @Service
 public class TrackingService {
 
@@ -49,7 +49,7 @@ public class TrackingService {
 
         // No worker yet (waiting, cancelled or expired): just the status message.
         if (job.getWorker() == null) {
-            return new TrackingView(job.getId(), job.getStatus(), null, null, null, null,
+            return new TrackingView(job.getId(), job.getStatus(), null, null, null, null, null, null,
                     message(job.getStatus(), null, null));
         }
 
@@ -66,11 +66,18 @@ public class TrackingService {
             eta = estimate(profile, job);
         }
 
+        // The start code is shown only BEFORE the work starts. After that it is not needed.
+        String startCode = null;
+        if (job.getStatus() == JobStatus.ACCEPTED || job.getStatus() == JobStatus.EN_ROUTE
+                || job.getStatus() == JobStatus.ARRIVED) {
+            startCode = job.getStartCode();
+        }
+
         // A rating from zero jobs means nothing, so we show it only after the first job.
         Double rating = profile.getJobsCompleted() > 0 ? profile.getAvgRating() : null;
 
-        return new TrackingView(job.getId(), job.getStatus(), firstName, rating,
-                profile.getJobsCompleted(), eta, message(job.getStatus(), firstName, eta));
+        return new TrackingView(job.getId(), job.getStatus(), firstName, profile.getTier(), rating,
+                profile.getJobsCompleted(), eta, startCode, message(job.getStatus(), firstName, eta));
     }
 
     // Returns the ETA in minutes, or null when we cannot trust a number
@@ -100,14 +107,14 @@ public class TrackingService {
             case ACCEPTED -> eta == null
                     ? name + " accepted your job. Waiting for their location."
                     : (eta <= 2
-                       ? name + " is arriving soon."
-                       : name + " accepted your job and is about " + eta + " minutes away.");
+                        ? name + " is arriving soon."
+                        : name + " accepted your job and is about " + eta + " minutes away.");
             case EN_ROUTE -> eta == null
                     ? name + " is on the way."
                     : (eta <= 2
-                       ? name + " is arriving soon."
-                       : name + " is on the way, about " + eta + " minutes away.");
-            case ARRIVED -> name + " has arrived.";
+                        ? name + " is arriving soon."
+                        : name + " is on the way, about " + eta + " minutes away.");
+            case ARRIVED -> name + " has arrived. Check their name, then give them your start code.";
             case IN_PROGRESS -> name + " is working on your job.";
             case COMPLETED -> "The work is finished. Please check the photo and confirm.";
             case PAID -> "This job is complete. Thank you!";
